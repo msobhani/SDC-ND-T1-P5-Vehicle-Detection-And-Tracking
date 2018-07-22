@@ -1,37 +1,148 @@
-# Vehicle Detection
+# Vehicle Detection and Tracking
+
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-
-In this project, your goal is to write a software pipeline to detect vehicles in a video (start with the test_video.mp4 and later implement on full project_video.mp4), but the main output or product we want you to create is a detailed writeup of the project.  Check out the [writeup template](https://github.com/udacity/CarND-Vehicle-Detection/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup.  
-
-Creating a great writeup:
----
-A great writeup should include the rubric points as well as your description of how you addressed each point.  You should include a detailed description of the code used in each step (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
-
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
-
-You can submit your writeup in markdown or use another method and submit a pdf instead.
-
-The Project
+## Overview
 ---
 
-The goals / steps of this project are the following:
+The goal of this project is to write a software pipeline to detect vehicles and identify their locations in a video captured of a front facing camera that is mounted on the vehicle's center. The project should:
 
-* Perform a Histogram of Oriented Gradients (HOG) feature extraction on a labeled training set of images and train a classifier Linear SVM classifier
-* Optionally, you can also apply a color transform and append binned color features, as well as histograms of color, to your HOG feature vector. 
-* Note: for those first two steps don't forget to normalize your features and randomize a selection for training and testing.
-* Implement a sliding-window technique and use your trained classifier to search for vehicles in images.
-* Run your pipeline on a video stream (start with the test_video.mp4 and later implement on full project_video.mp4) and create a heat map of recurring detections frame by frame to reject outliers and follow detected vehicles.
+* Perform a Histogram of Oriented Gradients (HOG) feature extraction on a labeled training set of images and train a Linear SVM classifier
+* Apply a color transform and append binned color features, as well as histograms of color, to the HOG feature vector.
+* Normalize the features and randomize a selection for training and testing.
+* Implement a sliding-window technique and use on the trained classifier to search for vehicles in images.
+* Run the pipeline on a given video stream (`test_video.mp4` and on full `project_video.mp4`) and create a heat map of recurring detections frame by frame to reject outliers and follow detected vehicles.
 * Estimate a bounding box for vehicles detected.
 
-Here are links to the labeled data for [vehicle](https://s3.amazonaws.com/udacity-sdc/Vehicle_Tracking/vehicles.zip) and [non-vehicle](https://s3.amazonaws.com/udacity-sdc/Vehicle_Tracking/non-vehicles.zip) examples to train your classifier.  These example images come from a combination of the [GTI vehicle image database](http://www.gti.ssr.upm.es/data/Vehicle_database.html), the [KITTI vision benchmark suite](http://www.cvlibs.net/datasets/kitti/), and examples extracted from the project video itself.   You are welcome and encouraged to take advantage of the recently released [Udacity labeled dataset](https://github.com/udacity/self-driving-car/tree/master/annotations) to augment your training data.  
+<img src="videos/project_video_detected.gif" width="80%"/> 
 
-Some example images for testing your pipeline on single frames are located in the `test_images` folder.  To help the reviewer examine your work, please save examples of the output from each stage of your pipeline in the folder called `ouput_images`, and include them in your writeup for the project by describing what each image shows.    The video called `project_video.mp4` is the video your pipeline should work well on.  
+The project is submitted with the following structure: 
+* `Vehicle-Detection-and-Tracking.ipnyb` (The main code and test images)
+* `README.md` a report writeup file (markdown)
+* `videos/` (contains the generated videos resulted from the pipeline)
 
-**As an optional challenge** Once you have a working pipeline for vehicle detection, add in your lane-finding algorithm from the last project to do simultaneous lane-finding and vehicle detection!
+## Implementation
+---
 
-**If you're feeling ambitious** (also totally optional though), don't stop there!  We encourage you to go out and take video of your own, and show us how you would implement this project on a new video!
+The vehicle detection and tracking in a video stream is implemented as below:
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+* Reading the training data
+* Feature extraction helper functions
+* Extracting vehicle and non-vehicle features
+* Scalling and splitting features
+* Train the linear SVC classifier
+* Pipeline to detect vehicles
+* Apply the vehicle detection to the video
 
+![alt text](output_videos/project_video_output.gif "Result")
+
+These steps are described in the upcoming sections. The full implementation is available at [jupyter notebook](Vehicle-Detection-and-Tracking.ipynb)
+
+
+### Reading the training data
+
+The provided training data is imported, which includes **8792** Vehicle as well as **8968** non-vehicle images. Below are some of the imorted images from both categories depicted:
+
+Here's an example of the dataset:
+
+![alt text](output_images/training-dataset-examples.png "")
+
+
+### Feature extraction helper functions
+
+In order to extract the required features from the dataset, some helper functions were developed. These are explained in detail as below.
+
+
+
+```python
+def get_hog_features(img, orient=10, pix_per_cell=8, cell_per_block=2, vis=False)
+```
+This function accepts params and returns a histogram of Oriented Gradients (HOG for short) as features and an optional matrix for visualization. THe following parameters were used:
+ - `10` orientations
+ - `8` pixels per cell
+ - `2` cells per block
+
+The following pictures demonstrate some examples where the HOG features are extracted for both vehicle and non-vehicle images.
+
+![alt text](output_images/hog-features.png "")
+
+
+
+```python
+def bin_spatial(img, size=(32, 32))
+```
+This function is used to convert any input image into a feature vector that can be feeded to the classifier. The `cv2.resize().ravel()` is called to create the feature vector that has onle one single dimension
+
+
+
+```python
+def color_hist(img, nbins=32, bins_range=(0, 256))
+```
+This function computes the histogram of the RGB channels separately and concatenate the histograms into a single feature vector. The  color channels are separated using `numpy's` `histogram()` function.
+
+
+
+```python
+def extract_features(img, 
+                      hog_features = [],
+                      x=0, 
+                      y=0, 
+                      s=64,                            
+                      spatial_size=(32, 32),
+                      orient=10, 
+                      pix_per_cell=8, 
+                      cell_per_block=2)
+```
+This function utilitzes the functions metioned above to compute spatial features, HOG features and histogram features on a given image, and then returns the concatenation of all of the extracted features.
+   
+
+
+```python
+def extract_training_features(images)
+```
+And finally, this function converts a set of given images to the YCrCb color space, and the calls `extract_features()` to extract their features. 
+
+
+### Scalling and splitting features
+
+To normalize the features, it is is necessary to remove the mean and scale the features into single varience. This is done using `StandardScaler()` from `sklearn.preprocessing()` to achieve a normally distributed dataset. 
+
+Also, the training dataset is split up data into randomized training and test sets. To do that, the `train_test_split()` function is used. The training and test sets are split up by a factor of 0.2.
+
+
+### Training the linear SVC classifier
+
+The training data and their labels are given to a linear SVC classifier for it to be trained. Using the test set we were able to achieve an an accuray of **98.874%**
+
+
+### Pipeline to detect vehicles
+
+To detect vehicles, a sliding window is pass over the input images. The vehicle location and size is estimated in different parts of the image to improve the performance. The sliding window size is adapted based on the area that we're looking for the vehicles. In the regions closer to the lower part of the image, a large sliding window was used. As we move further away, the sliding window becomes smaller, because the vehicles should also appear smaller.
+
+To improve its performance we aproximated the vehicle location and size in diferent areas of the image. 
+In the region closer to the bonet, lower in the image, we use a larger window size, as opposed to a region further away, or higher in the image, where we can approximate that the vehicles will be smaller. This scaling of the sliding window goes from **30%** of the original frame size, up to **80%**.
+
+The `Pipeline` class contains three important functions:
+
+* `_pass_sliding_window()`: Is in charge of passing the sliding windows in different sizes over the input image for feature extraction, and using of the classifier to predict the existance of a vehicle
+* `_merge_detections()`: Creates a heatmap, applies a threshold to remove false positives, and finally consolidates the detections to identify the vehicles in the image. To avoid false positives we assume that the images are an ordered sequence, and therefore we can remove those detections that do not fit the history of already detected vehicles.
+* `run()` runs the above mentioned functions on the given input images, and overlays rectangles over the image where a vehicle is detected.
+
+Below are some of the examples where the vehicles are identified and their corresponding heatmap:
+
+![alt text](output_images/heatmap0.png)
+![alt text](output_images/heatmap1.png)
+![alt text](output_images/heatmap2.png)
+![alt text](output_images/heatmap3.png)
+![alt text](output_images/heatmap4.png)
+![alt text](output_images/heatmap5.png)
+
+
+### Apply the vehicle detection to the video
+
+Finally, we pass the project video to the piepline to detect vehicles. This is done using the `detect_vehicles_in_video()` function. The output video is available here: [project video](videos/project_video_detected.mp4)
+
+
+## Discussion
+
+In the [project video](videos/project_video_detected.mp4), 2 vehicles are clearly identified. The problem is that the pipeline is to slow to generate the output video. In the real time, this can be fixed by sing more optimized algorithms, and utilize a better hardware like a GPU to perform parallel processing of the video stream. This approach does not take more complicated scenarios into consideration. To detect other traffic participants, like the motorcycles, trucks adn etc., we need a more robust classification methods. Additionally, in case of differnt driving scenarios like in a bad weather, on a different road terrain, or in different lighting conditions, this approach will most likely fail.
