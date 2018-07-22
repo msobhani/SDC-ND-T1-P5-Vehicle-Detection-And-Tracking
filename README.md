@@ -30,13 +30,11 @@ The vehicle detection and tracking in a video stream is implemented as below:
 * Feature extraction helper functions
 * Extracting vehicle and non-vehicle features
 * Scalling and splitting features
-* Train the linear SVC classifier
+* Train the linear SVM classifier
 * Pipeline to detect vehicles
 * Apply the vehicle detection to the video
 
-![alt text](output_videos/project_video_output.gif "Result")
-
-These steps are described in the upcoming sections. The full implementation is available at [jupyter notebook](Vehicle-Detection-and-Tracking.ipynb)
+These steps are described in the upcoming sections. The full implementation is available here: [jupyter notebook](Vehicle-Detection-and-Tracking.ipynb)
 
 
 ### Reading the training data
@@ -110,25 +108,24 @@ To normalize the features, it is is necessary to remove the mean and scale the f
 Also, the training dataset is split up data into randomized training and test sets. To do that, the `train_test_split()` function is used. The training and test sets are split up by a factor of 0.2.
 
 
-### Training the linear SVC classifier
+### Training the linear SVM classifier
 
-The training data and their labels are given to a linear SVC classifier for it to be trained. Using the test set we were able to achieve an an accuray of **98.874%**
+The training data and their labels are given to a linear SVM (`sklearn.svm's LinearSVC`) classifier for it to be trained. Using the test set we were able to achieve an an accuray of **98.874%**
 
 
 ### Pipeline to detect vehicles
 
 To detect vehicles, a sliding window is pass over the input images. The vehicle location and size is estimated in different parts of the image to improve the performance. The sliding window size is adapted based on the area that we're looking for the vehicles. In the regions closer to the lower part of the image, a large sliding window was used. As we move further away, the sliding window becomes smaller, because the vehicles should also appear smaller.
 
-To improve its performance we aproximated the vehicle location and size in diferent areas of the image. 
-In the region closer to the bonet, lower in the image, we use a larger window size, as opposed to a region further away, or higher in the image, where we can approximate that the vehicles will be smaller. This scaling of the sliding window goes from **30%** of the original frame size, up to **80%**.
+To improve its performance we estimated the vehicle location and size in diferent areas of the image. In the region closer to the bonet, lower in the image, we use a larger window size, as opposed to the distant regions, where the vehicles appear smaller. This scaling of the sliding window goes from **30%** of the original frame size, up to **80%**.
 
 The `Pipeline` class contains three important functions:
 
 * `_pass_sliding_window()`: Is in charge of passing the sliding windows in different sizes over the input image for feature extraction, and using of the classifier to predict the existance of a vehicle
 * `_merge_detections()`: Creates a heatmap, applies a threshold to remove false positives, and finally consolidates the detections to identify the vehicles in the image. To avoid false positives we assume that the images are an ordered sequence, and therefore we can remove those detections that do not fit the history of already detected vehicles.
-* `run()` runs the above mentioned functions on the given input images, and overlays rectangles over the image where a vehicle is detected.
+* `run()`: runs the above mentioned functions on the given input images, and overlays rectangles over the image where a vehicle is detected.
 
-Below are some of the examples where the vehicles are identified and their corresponding heatmap:
+Below are some of the examples of the identified vehicles and their corresponding heatmap:
 
 ![alt text](output_images/heatmap0.png)
 ![alt text](output_images/heatmap1.png)
@@ -144,5 +141,6 @@ Finally, we pass the project video to the piepline to detect vehicles. This is d
 
 
 ## Discussion
+---
 
-In the [project video](videos/project_video_detected.mp4), 2 vehicles are clearly identified. The problem is that the pipeline is to slow to generate the output video. In the real time, this can be fixed by sing more optimized algorithms, and utilize a better hardware like a GPU to perform parallel processing of the video stream. This approach does not take more complicated scenarios into consideration. To detect other traffic participants, like the motorcycles, trucks adn etc., we need a more robust classification methods. Additionally, in case of differnt driving scenarios like in a bad weather, on a different road terrain, or in different lighting conditions, this approach will most likely fail.
+In the [project video](videos/project_video_detected.mp4), 2 vehicles are clearly identified. The problem is that the pipeline is very slow and takes around 30 minutes to generate the output video. In the real time, this can be fixed by utilizing more optimized algorithms, and  a better hardware like a GPU to perform parallel processing of the video stream. This approach does not take more complicated scenarios into consideration. To detect other traffic participants, like the motorcycles, trucks etc., we need more robust classification methods. Additionally, in case of differnt driving scenarios like bad weather, different road terrain, or different lighting conditions, this approach will most likely fail.
